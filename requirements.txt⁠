@@ -1,6 +1,0 @@
-runpod>=1.7.0
-torch
-torchaudio
-indextts
-requests
-ffmpeg-python
