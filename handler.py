@@ -21,6 +21,7 @@ import time
 
 import requests
 import runpod
+import torch
 from indextts.infer_v2 import IndexTTS2
 
 UA = {"User-Agent": "marketplace-worker/1.0"}   # some hosts/WAFs reject the default python-requests agent
@@ -28,12 +29,19 @@ MAX_INLINE_BYTES = 6 * 1024 * 1024               # RunPod limits the size of a r
 MIN_REFERENCE_SECONDS = 3.0                      # the site's rule: shorter voice samples are refused
 
 print("Loading IndexTTS 2 model...", flush=True)
+try:
+    print("[boot] cuda available:", torch.cuda.is_available(),
+          "| device:", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "none (CPU = very slow)",
+          flush=True)
+except Exception as _e:
+    print("[boot] could not read CUDA info:", str(_e)[:150], flush=True)
+_t0 = time.time()
 tts = IndexTTS2(
     cfg_path="checkpoints_2/config.yaml",
     model_dir="checkpoints_2",
     use_fp16=True,
 )
-print("Model ready.", flush=True)
+print(f"Model ready in {time.time() - _t0:.0f}s.", flush=True)
 
 
 def _download(url, dest):
@@ -101,6 +109,10 @@ def _upload(url, path):
 
 def handler(job):
     inp = job.get("input") or {}
+    if inp.get("task") == "warmup":
+        # Sent by the website when someone opens the Voice page, only to wake a worker early.
+        # The model already loaded when this worker started, so there is nothing to do but answer.
+        return {"warm": True, "gpu_seconds": 0}
     started = time.time()
     try:
         with tempfile.TemporaryDirectory() as tmp:
