@@ -9,7 +9,10 @@ RUN apt-get update && apt-get install -y ffmpeg git git-lfs libsndfile1 \
 RUN pip install --no-cache-dir -U uv
 
 WORKDIR /app
-RUN git clone https://github.com/index-tts/index-tts.git
+# Pinned to the commit that was newest when Release #7 was built (30 Sep 2026),
+# so a rebuild can never silently pull different index-tts code.
+RUN git clone https://github.com/index-tts/index-tts.git && \
+    cd index-tts && git checkout d9e41aac89fd00b3d71497fddb287b7f24613712
 WORKDIR /app/index-tts
 RUN uv sync
 
